@@ -60,24 +60,22 @@ def show_images(text):
     inner_frame.update_idletasks()
     frame_width = inner_frame.winfo_width()
 
-    # Definir tamaño máximo para las imágenes (ajustado para ser un poco más pequeño)
-    max_image_height = 150  # Ajusta este valor según tus necesidades (originalmente 200)
-    max_image_width = 150   # Ajusta este valor según tus necesidades (originalmente 200)
+    # Definir tamaño máximo para las imágenes
+    max_image_height = 150  # Ajusta este valor según tus necesidades
+    max_image_width = 150   # Ajusta este valor según tus necesidades
 
-    # Lista para almacenar todas las imágenes
-    images_list = []
+    symbol_not_found = False  # Bandera para detectar símbolos no encontrados
 
     for word in words:
+        word_images = []  # Imágenes para la palabra actual
         # Intentar buscar la imagen/GIF correspondiente a la palabra completa
         word_image_path_gif = f"words/{word}.gif"
         word_image_path_png = f"words/{word}.png"
 
         if os.path.exists(word_image_path_gif):
-            # Si existe un GIF para la palabra completa
-            images_list.append((word_image_path_gif, 'gif'))
+            word_images.append((word_image_path_gif, 'gif'))
         elif os.path.exists(word_image_path_png):
-            # Si existe una imagen PNG para la palabra completa
-            images_list.append((word_image_path_png, 'png'))
+            word_images.append((word_image_path_png, 'png'))
         else:
             # Si no hay imagen de la palabra, añadir las imágenes de las letras
             for letter in word:
@@ -92,53 +90,53 @@ def show_images(text):
                         letter_image_path_png = f"images/{l}.png"
 
                         if os.path.exists(letter_image_path_gif):
-                            images_list.append((letter_image_path_gif, 'gif'))
+                            word_images.append((letter_image_path_gif, 'gif'))
                             letter_found = True
                             break
                         elif os.path.exists(letter_image_path_png):
-                            images_list.append((letter_image_path_png, 'png'))
+                            word_images.append((letter_image_path_png, 'png'))
                             letter_found = True
                             break
+
+                    # Si no se encontró una imagen para el carácter
                     if not letter_found:
-                        print(f"No se encontró imagen para: {letter}")
+                        symbol_not_found = True
+                        break
 
-    # Calcular el número de imágenes por fila
-    num_images = len(images_list)
-    if num_images == 0:
-        return
+        if symbol_not_found:
+            break  # Detenemos la búsqueda si encontramos un símbolo no válido
 
-    # Estimar ancho de imagen
-    estimated_image_width = max_image_width + 10  # Añadimos margen
+        # Crear un contenedor con borde para separar visualmente cada palabra
+        word_frame = tk.Frame(inner_frame, bg='#f0f0f0', bd=2, relief='solid', padx=10, pady=10)
+        word_frame.pack(fill='x', pady=10)  # Añadir separación entre grupos
 
-    images_per_row = max(1, frame_width // estimated_image_width)
-    if images_per_row > num_images:
-        images_per_row = num_images
+        # Colocar la palabra en la parte superior del contenedor
+        word_label = tk.Label(word_frame, text=word, bg='#f0f0f0', font=('Helvetica', 14, 'bold'))
+        word_label.pack(pady=(0, 5))  # Colocar la palabra arriba con un pequeño margen
 
-    # Ajustar las columnas para que se distribuyan uniformemente
-    for i in range(images_per_row):
-        inner_frame.grid_columnconfigure(i, weight=1)
+        # Crear un sub-contenedor para las imágenes que se centrará
+        images_frame = tk.Frame(word_frame, bg='#f0f0f0')
+        images_frame.pack(anchor='center')  # Centrar el contenedor de las imágenes
 
-    # Redimensionar imágenes y colocarlas en el grid
-    row = 0
-    col = 0
-    for img_path, img_type in images_list:
-        if img_type == 'gif':
-            # Manejar GIFs animados
-            label = AnimatedGIF(inner_frame, img_path, bg='#f0f0f0')
-            label.grid(row=row, column=col, padx=5, pady=5, sticky='nsew')
-        else:
-            # Cargar y redimensionar imágenes
-            img = Image.open(img_path)
-            img = resize_image(img, max_image_width, max_image_height)
-            img_tk = ImageTk.PhotoImage(img)
-            label = tk.Label(inner_frame, image=img_tk, bg='#f0f0f0')
-            label.image = img_tk  # Evita que la imagen se elimine
-            label.grid(row=row, column=col, padx=5, pady=5, sticky='nsew')
+        # Redimensionar imágenes y colocarlas en el sub-contenedor centrado
+        for img_path, img_type in word_images:
+            if img_type == 'gif':
+                # Manejar GIFs animados
+                label = AnimatedGIF(images_frame, img_path, bg='#f0f0f0')
+                label.pack(side='left', padx=5, pady=5)
+            else:
+                # Cargar y redimensionar imágenes
+                img = Image.open(img_path)
+                img = resize_image(img, max_image_width, max_image_height)
+                img_tk = ImageTk.PhotoImage(img)
+                label = tk.Label(images_frame, image=img_tk, bg='#f0f0f0')
+                label.image = img_tk  # Evita que la imagen se elimine
+                label.pack(side='left', padx=5, pady=5)
 
-        col += 1
-        if col >= images_per_row:
-            col = 0
-            row += 1
+    # Mostrar mensaje de error si se detectó un símbolo no válido
+    if symbol_not_found:
+        error_label = tk.Label(inner_frame, text="Símbolo o carácter no encontrado.", fg="red", font=('Helvetica', 12))
+        error_label.pack(pady=10)
 
     # Ajustar el tamaño del inner_frame para el scroll
     inner_frame.update_idletasks()
@@ -148,12 +146,31 @@ def show_images(text):
 def update_history(text):
     search_history.append(text)
     index = len(search_history)
-    history_entry = f"{index}. {text}\n"
-    history_text.configure(state='normal')
-    history_text.insert(tk.END, history_entry)
-    history_text.configure(state='disabled')
-    with open("historial_palabras.txt", "a", encoding='utf-8') as file:
-        file.write(text + "\n")
+    
+    # Crear una etiqueta clicable para cada palabra en el historial
+    history_label = tk.Label(history_text, text=f"{index}. {text}", fg="blue", cursor="hand2", font=('Helvetica', 12))
+    history_label.pack(anchor='w', padx=5, pady=2)
+
+    # Asociar evento de clic a la etiqueta
+    history_label.bind("<Button-1>", lambda event, t=text: on_history_click(t))
+
+    # Guardar el historial en el archivo
+    if os.path.exists("historial_palabras.txt"):
+        with open("historial_palabras.txt", "r+", encoding='utf-8') as file:
+            content = file.read()
+            file.seek(0, 0)
+            file.write(text + "\n" + content)  # Insertar al principio del archivo
+    else:
+        with open("historial_palabras.txt", "w", encoding='utf-8') as file:
+            file.write(text + "\n")
+
+def on_history_click(text):
+    # Colocar la palabra/frase en la barra de búsqueda
+    entry.delete(0, tk.END)  # Borrar cualquier texto actual
+    entry.insert(0, text)    # Insertar la palabra/frase del historial
+
+    # Mostrar las imágenes nuevamente
+    show_images(text)
 
 # Función para procesar la entrada del usuario
 def process_input():
