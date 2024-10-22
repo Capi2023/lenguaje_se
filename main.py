@@ -1,3 +1,10 @@
+# Cambios a la aplicacion:
+# Colores que no sean gris como colores claros, talvez cafe
+# Mas grande la barra de busqueda
+# Historial de palabras mas chico y mas angosto
+
+# Link para señas de manos: https://es.hesperian.org/hhg/Disabled_Village_Children:Lenguaje_de_se%C3%B1as
+
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk, ImageSequence
@@ -26,6 +33,7 @@ class AnimatedGIF(tk.Label):
         try:
             for frame in ImageSequence.Iterator(img):
                 frame = frame.convert('RGBA')
+                # No componemos sobre fondo blanco, mantenemos la transparencia
                 self.sequence.append(ImageTk.PhotoImage(frame))
             self.configure(image=self.sequence[0])
         except EOFError:
@@ -36,7 +44,7 @@ class AnimatedGIF(tk.Label):
         self.configure(image=self.sequence[self.idx])
         self.after(self.delay, self.next_frame)
 
-# Función para redimensionar las imágenes o GIFs si no caben en la pantalla
+# Función para redimensionar las imágenes o GIFs manteniendo la proporción
 def resize_image(img, max_width, max_height):
     # Obtener tamaño original de la imagen
     original_width, original_height = img.size
@@ -61,10 +69,8 @@ def show_images(text):
     frame_width = inner_frame.winfo_width()
 
     # Definir tamaño máximo para las imágenes
-    max_image_height = 150  # Ajusta este valor según tus necesidades
-    max_image_width = 150   # Ajusta este valor según tus necesidades
-
-    symbol_not_found = False  # Bandera para detectar símbolos no encontrados
+    max_image_height = 50  # Ajusta este valor según tus necesidades
+    max_image_width = 50   # Ajusta este valor según tus necesidades
 
     for word in words:
         word_images = []  # Imágenes para la palabra actual
@@ -98,13 +104,9 @@ def show_images(text):
                             letter_found = True
                             break
 
-                    # Si no se encontró una imagen para el carácter
+                    # Si no se encontró una imagen para el carácter, ignorar y continuar
                     if not letter_found:
-                        symbol_not_found = True
-                        break
-
-        if symbol_not_found:
-            break  # Detenemos la búsqueda si encontramos un símbolo no válido
+                        continue
 
         # Crear un contenedor con borde para separar visualmente cada palabra
         word_frame = tk.Frame(inner_frame, bg='#f0f0f0', bd=2, relief='solid', padx=10, pady=10)
@@ -126,21 +128,17 @@ def show_images(text):
                 label.pack(side='left', padx=5, pady=5)
             else:
                 # Cargar y redimensionar imágenes
-                img = Image.open(img_path)
+                img = Image.open(img_path).convert('RGBA')
                 img = resize_image(img, max_image_width, max_image_height)
                 img_tk = ImageTk.PhotoImage(img)
                 label = tk.Label(images_frame, image=img_tk, bg='#f0f0f0')
                 label.image = img_tk  # Evita que la imagen se elimine
                 label.pack(side='left', padx=5, pady=5)
 
-    # Mostrar mensaje de error si se detectó un símbolo no válido
-    if symbol_not_found:
-        error_label = tk.Label(inner_frame, text="Símbolo o carácter no encontrado.", fg="red", font=('Helvetica', 12))
-        error_label.pack(pady=10)
-
     # Ajustar el tamaño del inner_frame para el scroll
     inner_frame.update_idletasks()
     image_canvas.config(scrollregion=image_canvas.bbox("all"))
+
 
 # Función para actualizar el historial de palabras buscadas
 def update_history(text):
