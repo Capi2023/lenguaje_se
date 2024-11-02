@@ -6,6 +6,8 @@ from PIL import Image, ImageTk, ImageSequence
 from ttkthemes import ThemedTk
 import os
 from collections import defaultdict
+import webbrowser
+
 
 # Historial de palabras buscadas
 search_history = []
@@ -265,7 +267,6 @@ class TraductorFrame(tk.Frame):
         self.history_text.tag_configure(tag_name, foreground="#8B4513")
         self.history_text.configure(state='disabled')
 
-
         # Guardar el historial en el archivo
         if os.path.exists("historial_palabras.txt"):
             with open("historial_palabras.txt", "r+", encoding='utf-8') as file:
@@ -460,7 +461,6 @@ class TraductorFrame(tk.Frame):
         self.image_canvas.config(scrollregion=self.image_canvas.bbox("all"))
 
 
-
 # Clases para las otras opciones (por ahora vacías)
 class DiccionarioFrame(tk.Frame):
     def __init__(self, parent, controller):
@@ -634,16 +634,86 @@ class DiccionarioFrame(tk.Frame):
                 fraction = y / content_height
                 self.dict_canvas.yview_moveto(fraction)
 
-
-
-
+# Clase para la opción 3 (por ahora vacía)
 class Opcion3Frame(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         self.controller = controller
         self.configure(bg='#F5E8D0')
-        label = tk.Label(self, text="Opción 3 - En desarrollo", font=('Helvetica', 16), bg='#F5E8D0')
-        label.pack(pady=20)
+
+        # Título
+        title_label = tk.Label(self, text="Recursos", font=('Helvetica', 20, 'bold'),
+                               bg='#F5E8D0', fg='#8B4513')
+        title_label.pack(pady=20)
+
+        # Descripción
+        description_label = tk.Label(
+            self,
+            text="Encuentra aquí enlaces a páginas y videos para profundizar en el aprendizaje del lenguaje de señas.",
+            font=('Helvetica', 14), bg='#F5E8D0', fg='#8B4513', wraplength=800, justify="center"
+        )
+        description_label.pack(pady=10)
+
+        # Frame para los recursos con scrollbar
+        resources_frame = tk.Frame(self, bg='#F5E8D0')
+        resources_frame.pack(pady=10, fill='both', expand=True)
+
+        # Canvas para permitir scroll si hay muchos recursos
+        canvas = tk.Canvas(resources_frame, bg='#F5E8D0')
+        scrollbar = ttk.Scrollbar(resources_frame, orient='vertical', command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg='#F5E8D0')
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(
+                scrollregion=canvas.bbox("all")
+            )
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor='nw')
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        # Lista de recursos (enlaces)
+        resources = [
+            {"title": "Curso de Lengua de Señas Mexicana (LSM)", "url": "https://www.dif.puebla.gob.mx/cursos-lsm", "description": "Curso oficial ofrecido por el DIF de Puebla."},
+            {"title": "Alfabeto Dactilológico", "url": "https://www.fundacioncnse.org/alfabeto"},
+            {"title": "Videos Educativos de LSM", "url": "https://www.youtube.com/channel/UCxLSM"},
+            # Añade más recursos aquí
+        ]
+
+        # Agregar los recursos al frame
+        for resource in resources:
+            resource_frame = tk.Frame(scrollable_frame, bg='#F5E8D0', pady=5)
+            resource_frame.pack(fill='x', padx=20, pady=5)
+
+            title = resource["title"]
+            url = resource["url"]
+
+            # Título del recurso como enlace clicable
+            title_label = tk.Label(resource_frame, text=title, font=('Helvetica', 14, 'underline'),
+                                   fg='blue', bg='#F5E8D0', cursor="hand2")
+            title_label.pack(anchor='w')
+            title_label.bind("<Button-1>", lambda e, url=url: self.open_link(url))
+
+            # Mostrar la URL (opcional)
+            url_label = tk.Label(resource_frame, text=url, font=('Helvetica', 12),
+                                 fg='#8B4513', bg='#F5E8D0')
+            url_label.pack(anchor='w', padx=20)
+
+            # Descripción (opcional)
+            description = resource.get("description", "")
+            if description:
+                description_label = tk.Label(resource_frame, text=description, font=('Helvetica', 12),
+                                            fg='#8B4513', bg='#F5E8D0', wraplength=700, justify="left")
+                description_label.pack(anchor='w', padx=20)
+
+
+    def open_link(self, url):
+        webbrowser.open_new_tab(url)
+
 
 # Inicializar los frames y añadirlos al contenedor
 for F in (TraductorFrame, DiccionarioFrame, Opcion3Frame):
@@ -665,7 +735,7 @@ menubar.add_cascade(label="Menú", menu=menu_principal)
 # Añadir opciones al menú
 menu_principal.add_command(label="Traductor", command=lambda: show_frame("TraductorFrame"))
 menu_principal.add_command(label="Diccionario", command=lambda: show_frame("DiccionarioFrame"))
-menu_principal.add_command(label="Opción 3", command=lambda: show_frame("Opcion3Frame"))
+menu_principal.add_command(label="Recursos", command=lambda: show_frame("Opcion3Frame"))
 menu_principal.add_separator()
 menu_principal.add_command(label="Salir", command=root.quit)
 
