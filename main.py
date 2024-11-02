@@ -5,6 +5,7 @@ from tkinter import ttk
 from PIL import Image, ImageTk, ImageSequence
 from ttkthemes import ThemedTk
 import os
+from collections import defaultdict
 
 # Historial de palabras buscadas
 search_history = []
@@ -179,7 +180,7 @@ class TraductorFrame(tk.Frame):
         history_frame = tk.Frame(content_frame, bg='#F5E8D0')
         history_frame.grid(row=0, column=0, sticky='nsew')
 
-        history_label = ttk.Label(history_frame, text="Historial de palabras:", background='#F5E8D0', font=('Helvetica', 16), foreground='#8B4513')
+        history_label = ttk.Label(history_frame, text="Historial de palabras (haz clic en una palabra para volver a verla):", background='#F5E8D0', font=('Helvetica', 16), foreground='#8B4513')
         history_label.pack(pady=5)
 
         # Text widget para el historial
@@ -251,12 +252,19 @@ class TraductorFrame(tk.Frame):
         index = len(search_history)  # Contador de búsqueda (el total de búsquedas realizadas)
 
         # Crear una etiqueta clicable para cada palabra en el historial
+        # Crear una etiqueta clicable para cada palabra en el historial
         self.history_text.configure(state='normal')
         self.history_text.insert('end', f"{index}. {text}\n")
-        self.history_text.tag_add(f"item{index}", f"{index}.0", f"{index}.end")
-        self.history_text.tag_bind(f"item{index}", "<Button-1>", lambda event, t=text: self.on_history_click(t))
-        self.history_text.tag_configure(f"item{index}", foreground="#8B4513")
+        start_index = f"{index}.0"
+        end_index = f"{index}.end"
+        tag_name = f"item{index}"
+        self.history_text.tag_add(tag_name, start_index, end_index)
+        self.history_text.tag_bind(tag_name, "<Button-1>", lambda event, t=text: self.on_history_click(t))
+        self.history_text.tag_bind(tag_name, "<Enter>", lambda event: self.history_text.tag_configure(tag_name, underline=True, foreground="#0000FF") or self.history_text.config(cursor="hand2"))
+        self.history_text.tag_bind(tag_name, "<Leave>", lambda event: self.history_text.tag_configure(tag_name, underline=False, foreground="#8B4513") or self.history_text.config(cursor=""))
+        self.history_text.tag_configure(tag_name, foreground="#8B4513")
         self.history_text.configure(state='disabled')
+
 
         # Guardar el historial en el archivo
         if os.path.exists("historial_palabras.txt"):
@@ -280,101 +288,178 @@ class TraductorFrame(tk.Frame):
         for widget in self.inner_frame.winfo_children():
             widget.destroy()
 
-        words = text.split()  # Divide el texto en palabras
-
         # Definir tamaño máximo para las imágenes
         max_image_height = 90  # Ajusta este valor según tus necesidades
         max_image_width = 90   # Ajusta este valor según tus necesidades
 
-        for word in words:
-            word_images = []  # Imágenes para la palabra actual
+        # Dividir el texto en palabras
+        words = text.split()
+        i = 0
+        while i < len(words):
+            found_match = False
+            # Intentar encontrar la frase más larga desde la posición actual
+            for j in range(len(words), i, -1):
+                phrase = ' '.join(words[i:j])
+                phrase_with_underscores = phrase.replace(' ', '_')
+                # Intentar encontrar la imagen de la frase
+                image_dirs = ['phrases', 'words']
+                found_image = False
+                word_images = []
 
-            # Intentar buscar la imagen/GIF correspondiente a la palabra completa
-            word_image_path_gif = f"words/{word}.gif"
-            word_image_path_png = f"words/{word}.png"
+                for dir in image_dirs:
+                    text_image_path_gif = f"{dir}/{phrase_with_underscores}.gif"
+                    text_image_path_png = f"{dir}/{phrase_with_underscores}.png"
+                    text_image_path_jpeg = f"{dir}/{phrase_with_underscores}.jpeg"
 
-            if os.path.exists(word_image_path_gif):
-                word_images.append((word_image_path_gif, 'gif'))
-            elif os.path.exists(word_image_path_png):
-                word_images.append((word_image_path_png, 'png'))
-            else:
-                # Si no hay imagen de la palabra, añadir las imágenes de las letras
-                for letter in word:
-                    if letter == " ":
-                        continue  # Saltar espacios en blanco
-                    elif letter in symbols_not_used:
-                        # Mostrar advertencia en la interfaz gráfica
-                        warning_message = f"El símbolo '{letter}' no se usa en el lenguaje de señas."
-                        word_images.append((warning_message, 'warning'))
-                        continue  # Continuar con las otras letras sin detener el flujo
-                    elif letter == "?":  # Condición especial para el signo de interrogación
-                        # Mapea "?" al archivo de imagen alternativo
-                        question_image_path_gif = "images/question_mark.gif"
-                        question_image_path_png = "images/question_mark.png"
+                    if os.path.exists(text_image_path_gif):
+                        word_images.append((text_image_path_gif, 'gif'))
+                        found_image = True
+                        break
+                    elif os.path.exists(text_image_path_png):
+                        word_images.append((text_image_path_png, 'png'))
+                        found_image = True
+                        break
+                    elif os.path.exists(text_image_path_jpeg):
+                        word_images.append((text_image_path_jpeg, 'jpeg'))
+                        found_image = True
+                        break
 
-                        if os.path.exists(question_image_path_gif):
-                            word_images.append((question_image_path_gif, 'gif'))
-                        elif os.path.exists(question_image_path_png):
-                            word_images.append((question_image_path_png, 'png'))
-                    else:
-                        # Buscar tanto mayúsculas como minúsculas y ambos formatos
-                        letter_variants = [letter.lower(), letter.upper()]
-                        letter_found = False
-                        for l in letter_variants:
-                            letter_image_path_gif = f"images/{l}.gif"
-                            letter_image_path_png = f"images/{l}.png"
+                if found_image:
+                    # Mostrar la imagen de la frase encontrada
+                    word_frame = tk.Frame(self.inner_frame, bg='#F5E8D0', bd=2, relief='solid',
+                                        padx=10, pady=10, highlightbackground='#A97C50')
+                    word_frame.pack(fill='x', pady=10)
 
-                            if os.path.exists(letter_image_path_gif):
-                                word_images.append((letter_image_path_gif, 'gif'))
-                                letter_found = True
-                                break
-                            elif os.path.exists(letter_image_path_png):
-                                word_images.append((letter_image_path_png, 'png'))
-                                letter_found = True
-                                break
+                    word_label = tk.Label(word_frame, text=phrase, bg='#F5E8D0',
+                                        font=('Helvetica', 14, 'bold'), fg='#8B4513')
+                    word_label.pack(pady=(0, 5))
 
-                        # Si no se encontró una imagen para el carácter, ignorar y continuar
-                        if not letter_found:
+                    images_frame = tk.Frame(word_frame, bg='#F5E8D0')
+                    images_frame.pack(anchor='center')
+
+                    for img_path, img_type in word_images:
+                        if img_type == 'gif':
+                            label = AnimatedGIF(images_frame, img_path, bg='#F5E8D0')
+                            label.pack(side='left', padx=5, pady=5)
+                        elif img_type in ['png', 'jpeg']:
+                            img = Image.open(img_path).convert('RGBA')
+                            img = resize_image(img, max_image_width, max_image_height)
+                            img_tk = ImageTk.PhotoImage(img)
+                            label = tk.Label(images_frame, image=img_tk, bg='#F5E8D0')
+                            label.image = img_tk  # Evita que la imagen se elimine
+                            label.pack(side='left', padx=5, pady=5)
+
+                    # Actualizar el scroll
+                    self.inner_frame.update_idletasks()
+                    self.image_canvas.config(scrollregion=self.image_canvas.bbox("all"))
+                    i = j  # Avanzar el índice a la posición después de la frase encontrada
+                    found_match = True
+                    break  # Salir del bucle interno ya que se encontró la frase
+
+            if not found_match:
+                # Procesar words[i] como palabra individual
+                word = words[i]
+                word_images = []
+                # Lista de directorios donde buscar imágenes de palabras
+                word_dirs = ['words', 'numbers']
+
+                found_word_image = False
+                for dir in word_dirs:
+                    word_image_path_gif = f"{dir}/{word}.gif"
+                    word_image_path_png = f"{dir}/{word}.png"
+                    word_image_path_jpeg = f"{dir}/{word}.jpeg"
+
+                    if os.path.exists(word_image_path_gif):
+                        word_images.append((word_image_path_gif, 'gif'))
+                        found_word_image = True
+                        break
+                    elif os.path.exists(word_image_path_png):
+                        word_images.append((word_image_path_png, 'png'))
+                        found_word_image = True
+                        break
+                    elif os.path.exists(word_image_path_jpeg):
+                        word_images.append((word_image_path_jpeg, 'jpeg'))
+                        found_word_image = True
+                        break
+
+                if not found_word_image:
+                    # Si no se encuentra la palabra, procesar por letras
+                    for letter in word:
+                        if letter == " ":
                             continue
+                        elif letter in symbols_not_used:
+                            warning_message = f"El símbolo '{letter}' no se usa en el lenguaje de señas."
+                            word_images.append((warning_message, 'warning'))
+                            continue
+                        elif letter == "?":
+                            question_image_path_gif = "images/question_mark.gif"
+                            question_image_path_png = "images/question_mark.png"
+                            if os.path.exists(question_image_path_gif):
+                                word_images.append((question_image_path_gif, 'gif'))
+                            elif os.path.exists(question_image_path_png):
+                                word_images.append((question_image_path_png, 'png'))
+                        else:
+                            letter_variants = [letter.lower(), letter.upper()]
+                            letter_found = False
+                            for l in letter_variants:
+                                letter_image_path_gif = f"images/{l}.gif"
+                                letter_image_path_png = f"images/{l}.png"
+                                letter_image_path_jpeg = f"images/{l}.jpeg"
 
-            # Crear un contenedor con borde para separar visualmente cada palabra
-            word_frame = tk.Frame(self.inner_frame, bg='#F5E8D0', bd=2, relief='solid', padx=10, pady=10, highlightbackground='#A97C50')
-            word_frame.pack(fill='x', pady=10)  # Añadir separación entre grupos
+                                if os.path.exists(letter_image_path_gif):
+                                    word_images.append((letter_image_path_gif, 'gif'))
+                                    letter_found = True
+                                    break
+                                elif os.path.exists(letter_image_path_png):
+                                    word_images.append((letter_image_path_png, 'png'))
+                                    letter_found = True
+                                    break
+                                elif os.path.exists(letter_image_path_jpeg):
+                                    word_images.append((letter_image_path_jpeg, 'jpeg'))
+                                    letter_found = True
+                                    break
 
-            # Cambiar el color de las palabras o letras mostradas
-            word_label = tk.Label(word_frame, text=word, bg='#F5E8D0', font=('Helvetica', 14, 'bold'), fg='#8B4513')
-            word_label.pack(pady=(0, 5))  # Colocar la palabra arriba con un pequeño margen
+                            if not letter_found:
+                                continue
 
-            # Crear un sub-contenedor para las imágenes que se centrará
-            images_frame = tk.Frame(word_frame, bg='#F5E8D0')
-            images_frame.pack(anchor='center')  # Centrar el contenedor de las imágenes
+                # Mostrar imágenes de la palabra o letras
+                word_frame = tk.Frame(self.inner_frame, bg='#F5E8D0', bd=2, relief='solid',
+                                    padx=10, pady=10, highlightbackground='#A97C50')
+                word_frame.pack(fill='x', pady=10)
 
-            # Redimensionar imágenes y colocarlas en el sub-contenedor centrado
-            for img_path, img_type in word_images:
-                if img_type == 'gif':
-                    # Manejar GIFs animados
-                    label = AnimatedGIF(images_frame, img_path, bg='#F5E8D0')
-                    label.pack(side='left', padx=5, pady=5)
-                elif img_type == 'png':
-                    # Cargar y redimensionar imágenes
-                    img = Image.open(img_path).convert('RGBA')
-                    img = resize_image(img, max_image_width, max_image_height)
-                    img_tk = ImageTk.PhotoImage(img)
-                    label = tk.Label(images_frame, image=img_tk, bg='#F5E8D0')
-                    label.image = img_tk  # Evita que la imagen se elimine
-                    label.pack(side='left', padx=5, pady=5)
-                elif img_type == 'warning':
-                    # Cambiar el color de advertencias
-                    warning_label = tk.Label(images_frame, text=img_path, fg='red', bg='#F5E8D0', font=('Helvetica', 12, 'bold'))
-                    warning_label.pack(side='left', padx=5, pady=5)
+                word_label = tk.Label(word_frame, text=word, bg='#F5E8D0',
+                                    font=('Helvetica', 14, 'bold'), fg='#8B4513')
+                word_label.pack(pady=(0, 5))
 
-            # Ajustar el tamaño del inner_frame para el scroll
-            self.inner_frame.update_idletasks()
-            self.image_canvas.config(scrollregion=self.image_canvas.bbox("all"))
+                images_frame = tk.Frame(word_frame, bg='#F5E8D0')
+                images_frame.pack(anchor='center')
 
-        # Ajustar el tamaño del inner_frame para el scroll
+                for img_path, img_type in word_images:
+                    if img_type == 'gif':
+                        label = AnimatedGIF(images_frame, img_path, bg='#F5E8D0')
+                        label.pack(side='left', padx=5, pady=5)
+                    elif img_type in ['png', 'jpeg']:
+                        img = Image.open(img_path).convert('RGBA')
+                        img = resize_image(img, max_image_width, max_image_height)
+                        img_tk = ImageTk.PhotoImage(img)
+                        label = tk.Label(images_frame, image=img_tk, bg='#F5E8D0')
+                        label.image = img_tk
+                        label.pack(side='left', padx=5, pady=5)
+                    elif img_type == 'warning':
+                        warning_label = tk.Label(images_frame, text=img_path, fg='red', bg='#F5E8D0',
+                                                font=('Helvetica', 12, 'bold'))
+                        warning_label.pack(side='left', padx=5, pady=5)
+
+                # Actualizar el scroll
+                self.inner_frame.update_idletasks()
+                self.image_canvas.config(scrollregion=self.image_canvas.bbox("all"))
+                i += 1  # Avanzar al siguiente índice
+
+        # Actualizar el scroll final
         self.inner_frame.update_idletasks()
         self.image_canvas.config(scrollregion=self.image_canvas.bbox("all"))
+
+
 
 # Clases para las otras opciones (por ahora vacías)
 class DiccionarioFrame(tk.Frame):
@@ -384,8 +469,38 @@ class DiccionarioFrame(tk.Frame):
         self.configure(bg='#F5E8D0')
 
         # Título
-        title_label = tk.Label(self, text="Diccionario de Señas", font=('Helvetica', 20, 'bold'), bg='#F5E8D0', fg='#8B4513')
+        title_label = tk.Label(self, text="Diccionario de Señas", font=('Helvetica', 20, 'bold'),
+                               bg='#F5E8D0', fg='#8B4513')
         title_label.pack(pady=20)
+
+        # Frame para la búsqueda
+        search_frame = tk.Frame(self, bg='#F5E8D0')
+        search_frame.pack(pady=10)
+
+        # Etiqueta y campo de entrada para la búsqueda
+        search_label = ttk.Label(search_frame, text="Buscar:", background='#F5E8D0',
+                                 font=('Helvetica', 14), foreground='#8B4513')
+        search_label.pack(side=tk.LEFT, padx=5)
+
+        self.search_entry = ttk.Entry(search_frame, width=30, font=('Helvetica', 14), style="TEntry")
+        self.search_entry.pack(side=tk.LEFT, padx=5)
+
+        # Botón de búsqueda
+        search_button = ttk.Button(search_frame, text="Buscar", command=self.perform_search,
+                                   style="TButton", padding=(5, 5))
+        search_button.pack(side=tk.LEFT, padx=5)
+
+        # Índice alfabético
+        alphabet_frame = tk.Frame(self, bg='#F5E8D0')
+        alphabet_frame.pack(pady=5)
+
+        alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+        for letter in alphabet:
+            letter_button = tk.Button(alphabet_frame, text=letter, font=('Helvetica', 12),
+                                      bg='#D4B897', fg='#8B4513', relief='flat',
+                                      command=lambda l=letter: self.scroll_to_letter(l))
+            letter_button.pack(side='left', padx=2)
 
         # Frame para el canvas y scrollbar
         canvas_frame = tk.Frame(self, bg='#F5E8D0')
@@ -409,8 +524,12 @@ class DiccionarioFrame(tk.Frame):
         # Ajustar el tamaño del frame interno
         self.dict_frame.bind("<Configure>", self.update_scrollregion)
 
+        # Inicializar el diccionario para las etiquetas de letras
+        self.letter_labels = {}
+
         # Cargar y mostrar todas las imágenes
         self.load_dictionary()
+
 
     def on_mouse_wheel(self, event):
             # Desplaza el canvas verticalmente
@@ -418,54 +537,104 @@ class DiccionarioFrame(tk.Frame):
 
     def update_scrollregion(self, event):
         self.dict_canvas.configure(scrollregion=self.dict_canvas.bbox("all"))
+   
+        
+    def load_dictionary(self, search_term=''):
+        # Limpiar los widgets existentes
+        for widget in self.dict_frame.winfo_children():
+            widget.destroy()
 
-    def load_dictionary(self):
-        # Obtener listas de archivos de imágenes y GIFs
-        image_files = []
-        gif_files = []
+        # Convertir el término de búsqueda a minúsculas para una búsqueda insensible a mayúsculas
+        search_term = search_term.lower()
+
+        # Diccionario para almacenar las entradas organizadas
+        items_dict = defaultdict(lambda: defaultdict(list))
 
         # Directorios donde se almacenan las imágenes y GIFs
-        image_dirs = [('Letras', 'images'), ('Palabras/Frases', 'words')]
+        image_dirs = [('Letras', 'images'), ('Números', 'numbers'), ('Palabras', 'words'), ('Frases', 'phrases')]
 
         for category, dir_path in image_dirs:
             if os.path.exists(dir_path):
                 for filename in os.listdir(dir_path):
-                    if filename.endswith('.png') or filename.endswith('.jpg') or filename.endswith('.jpeg'):
-                        image_files.append((filename, os.path.join(dir_path, filename), category))
-                    elif filename.endswith('.gif'):
-                        gif_files.append((filename, os.path.join(dir_path, filename), category))
+                    if filename.endswith(('.png', '.jpg', '.jpeg', '.gif')):
+                        filepath = os.path.join(dir_path, filename)
+                        name = os.path.splitext(filename)[0]
+                        # Aplicar filtro de búsqueda
+                        if search_term and search_term not in name.lower():
+                            continue
+                        # Obtener la letra inicial
+                        first_letter = name[0].upper()
+                        items_dict[category][first_letter].append((name, filepath))
 
-        # Combinar las listas y ordenar alfabéticamente
-        all_files = image_files + gif_files
-        all_files.sort(key=lambda x: x[0])
+        # Mostrar las entradas organizadas
+        self.letter_labels = {}  # Para navegación alfabética
+        for category in sorted(items_dict.keys()):
+            # Etiqueta de categoría
+            category_label = tk.Label(self.dict_frame, text=category, font=('Helvetica', 16, 'bold'),
+                                    bg='#F5E8D0', fg='#8B4513')
+            category_label.pack(pady=(10, 5))
 
-        # Mostrar cada imagen con su etiqueta correspondiente
-        for filename, filepath, category in all_files:
-            # Obtener el nombre sin extensión
-            name = os.path.splitext(filename)[0]
+            for letter in sorted(items_dict[category].keys()):
+                # Etiqueta de letra
+                letter_label = tk.Label(self.dict_frame, text=letter, font=('Helvetica', 14, 'bold'),
+                                        bg='#F5E8D0', fg='#8B4513')
+                letter_label.pack(pady=(5, 5))
+                self.letter_labels[letter] = letter_label  # Guardar referencia para navegación
 
-            # Crear un frame para cada elemento
-            item_frame = tk.Frame(self.dict_frame, bg='#F5E8D0', padx=10, pady=10)
-            item_frame.pack(fill='x', padx=10, pady=5)
+                # Mostrar los ítems bajo cada letra
+                for name, filepath in sorted(items_dict[category][letter], key=lambda x: x[0]):
+                    # Crear un frame para cada ítem
+                    item_frame = tk.Frame(self.dict_frame, bg='#F5E8D0', padx=10, pady=5)
+                    item_frame.pack(fill='x', padx=20, pady=2)
 
-            # Etiqueta con el nombre
-            name_label = tk.Label(item_frame, text=f"{name} ({category})", font=('Helvetica', 14), bg='#F5E8D0', fg='#8B4513')
-            name_label.pack(side='left', padx=10)
+                    # Etiqueta con el nombre
+                    name_label = tk.Label(item_frame, text=name, font=('Helvetica', 12),
+                                        bg='#F5E8D0', fg='#8B4513')
+                    name_label.pack(side='left', padx=10)
 
-            # Mostrar la imagen o GIF
-            if filename.endswith('.gif'):
-                image_label = AnimatedGIF(item_frame, filepath, bg='#F5E8D0')
-                image_label.pack(side='left', padx=10)
-            else:
-                # Cargar y redimensionar la imagen
-                img = Image.open(filepath).convert('RGBA')
-                max_image_height = 90
-                max_image_width = 90
-                img = resize_image(img, max_image_width, max_image_height)
-                img_tk = ImageTk.PhotoImage(img)
-                image_label = tk.Label(item_frame, image=img_tk, bg='#F5E8D0')
-                image_label.image = img_tk  # Mantener referencia
-                image_label.pack(side='left', padx=10)
+                    # Mostrar la imagen o GIF
+                    if filepath.endswith('.gif'):
+                        image_label = AnimatedGIF(item_frame, filepath, bg='#F5E8D0')
+                        image_label.pack(side='left', padx=10)
+                    else:
+                        img = Image.open(filepath).convert('RGBA')
+                        max_image_height = 90
+                        max_image_width = 90
+                        img = resize_image(img, max_image_width, max_image_height)
+                        img_tk = ImageTk.PhotoImage(img)
+                        image_label = tk.Label(item_frame, image=img_tk, bg='#F5E8D0')
+                        image_label.image = img_tk  # Mantener referencia
+                        image_label.pack(side='left', padx=10)
+
+        # Verificar si no se encontraron resultados
+        if not items_dict:
+            no_results_label = tk.Label(self.dict_frame, text="No se encontraron resultados.", font=('Helvetica', 14),
+                                        bg='#F5E8D0', fg='red')
+            no_results_label.pack(pady=20)
+
+        # Actualizar la región de scroll
+        self.dict_frame.update_idletasks()
+        self.dict_canvas.config(scrollregion=self.dict_canvas.bbox("all"))
+
+
+    def perform_search(self):
+        search_term = self.search_entry.get()
+        self.load_dictionary(search_term=search_term)
+    
+    def scroll_to_letter(self, letter):
+        if letter in self.letter_labels:
+            target_widget = self.letter_labels[letter]
+            self.dict_canvas.update_idletasks()
+            # Obtener la posición del widget dentro del canvas
+            bbox = self.dict_canvas.bbox(target_widget)
+            if bbox:
+                y = bbox[1]
+                # Calcular la fracción para desplazarse
+                content_height = self.dict_frame.winfo_height()
+                fraction = y / content_height
+                self.dict_canvas.yview_moveto(fraction)
+
+
 
 
 class Opcion3Frame(tk.Frame):
