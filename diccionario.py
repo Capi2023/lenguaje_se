@@ -38,7 +38,8 @@ class DiccionarioFrame(tk.Frame):
         alphabet_frame = tk.Frame(self, bg='#F5E8D0')
         alphabet_frame.pack(pady=5)
 
-        alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        # Agregar el símbolo '#' al alfabeto
+        alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#'
 
         for letter in alphabet:
             letter_button = tk.Button(alphabet_frame, text=letter, font=('Helvetica', 12),
@@ -78,7 +79,6 @@ class DiccionarioFrame(tk.Frame):
         self.dict_canvas.bind("<Button-4>", self.on_mouse_wheel)    # Linux (scroll up)
         self.dict_canvas.bind("<Button-5>", self.on_mouse_wheel)    # Linux (scroll down)
 
-
     def on_mouse_wheel(self, event):
         # Desplazar el canvas verticalmente
         if event.num == 4:  # Scroll up en Linux
@@ -115,12 +115,20 @@ class DiccionarioFrame(tk.Frame):
                     if filename.endswith(('.png', '.jpg', '.jpeg', '.gif')):
                         filepath = os.path.join(dir_path, filename)
                         name = os.path.splitext(filename)[0]
+                        # Reemplazar guiones bajos por espacios y capitalizar
+                        display_name = name.replace('_', ' ').title()
+
                         # Aplicar filtro de búsqueda
-                        if search_term and search_term not in name.lower():
+                        if search_term and search_term not in display_name.lower():
                             continue
-                        # Obtener la letra inicial
-                        first_letter = name[0].upper()
-                        items_dict[category][first_letter].append((name, filepath))
+
+                        # Determinar la clave de agrupación
+                        if display_name[0].isalpha():
+                            first_letter = display_name[0].upper()
+                        else:
+                            first_letter = '#'  # Agrupar bajo el símbolo '#'
+
+                        items_dict[category][first_letter].append((display_name, filepath))
 
         # Verificar si no se encontraron resultados
         no_results = True
@@ -136,20 +144,20 @@ class DiccionarioFrame(tk.Frame):
                 category_label.pack(pady=(10, 5))
 
                 for letter in sorted(items_dict[category].keys()):
-                    # Etiqueta de letra
+                    # Etiqueta de letra o símbolo
                     letter_label = tk.Label(self.dict_frame, text=letter, font=('Helvetica', 14, 'bold'),
                                             bg='#F5E8D0', fg='#8B4513')
                     letter_label.pack(pady=(5, 5))
                     self.letter_labels[letter] = letter_label  # Guardar referencia para navegación
 
                     # Mostrar los ítems bajo cada letra
-                    for name, filepath in sorted(items_dict[category][letter], key=lambda x: x[0]):
+                    for display_name, filepath in sorted(items_dict[category][letter], key=lambda x: x[0]):
                         # Crear un frame para cada ítem
                         item_frame = tk.Frame(self.dict_frame, bg='#F5E8D0', padx=10, pady=5)
                         item_frame.pack(fill='x', padx=20, pady=2)
 
-                        # Etiqueta con el nombre
-                        name_label = tk.Label(item_frame, text=name, font=('Helvetica', 12),
+                        # Etiqueta con el nombre (display_name)
+                        name_label = tk.Label(item_frame, text=display_name, font=('Helvetica', 12),
                                             bg='#F5E8D0', fg='#8B4513')
                         name_label.pack(side='left', padx=10)
 
@@ -158,12 +166,15 @@ class DiccionarioFrame(tk.Frame):
                             image_label = AnimatedGIF(item_frame, filepath, bg='#F5E8D0')
                             image_label.pack(side='left', padx=10)
                         else:
-                            img = Image.open(filepath).convert('RGBA')
-                            img = resize_image(img, max_image_width, max_image_height)
-                            img_tk = ImageTk.PhotoImage(img)
-                            image_label = tk.Label(item_frame, image=img_tk, bg='#F5E8D0')
-                            image_label.image = img_tk  # Mantener referencia
-                            image_label.pack(side='left', padx=10)
+                            try:
+                                img = Image.open(filepath).convert('RGBA')
+                                img = resize_image(img, max_image_width, max_image_height)
+                                img_tk = ImageTk.PhotoImage(img)
+                                image_label = tk.Label(item_frame, image=img_tk, bg='#F5E8D0')
+                                image_label.image = img_tk  # Mantener referencia
+                                image_label.pack(side='left', padx=10)
+                            except IOError:
+                                print(f"No se pudo abrir la imagen {filepath}")
 
         if no_results:
             no_results_label = tk.Label(self.dict_frame, text="No se encontraron resultados.", font=('Helvetica', 14),
@@ -182,10 +193,11 @@ class DiccionarioFrame(tk.Frame):
         if letter in self.letter_labels:
             target_widget = self.letter_labels[letter]
             self.dict_canvas.update_idletasks()
-            bbox = self.dict_canvas.bbox(target_widget)
-            if bbox:
-                y = bbox[1]
-                # Calcular la fracción para desplazarse
-                content_height = self.dict_canvas.bbox("all")[3]
-                fraction = y / content_height
-                self.dict_canvas.yview_moveto(fraction)
+            # Obtener la posición Y del widget dentro del frame interno
+            y = target_widget.winfo_y()
+            # Obtener la altura total del contenido
+            content_height = self.dict_frame.winfo_height()
+            # Calcular la fracción para desplazarse
+            fraction = y / content_height
+            # Mover la vista del canvas
+            self.dict_canvas.yview_moveto(fraction)

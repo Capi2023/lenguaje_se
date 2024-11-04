@@ -18,16 +18,24 @@ class TraductorFrame(tk.Frame):
         self.show_frame = show_frame
         self.configure(bg='#F5E8D0')
 
+        # Título
+        title_label = tk.Label(self, text="Traductor de Señas", font=('Helvetica', 20, 'bold'),
+                               bg='#F5E8D0', fg='#8B4513')
+        title_label.grid(row=0, column=0, pady=10)
+
         # Definir fuente grande
         self.font_large = ('Helvetica', 12)
 
         # Configurar el grid en el frame
-        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=0)  # Fila del título
+        self.grid_rowconfigure(1, weight=0)  # Fila del input_frame
+        self.grid_rowconfigure(2, weight=1)  # Fila del content_frame
+        self.grid_rowconfigure(3, weight=0)  # Fila del h_scrollbar
         self.grid_columnconfigure(0, weight=1)
 
         # Frame para la entrada y los botones
         input_frame = tk.Frame(self, bg='#F5E8D0')
-        input_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
+        input_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=10)
 
         # Ajustar el grid del input_frame
         input_frame.columnconfigure(0, weight=1)
@@ -54,10 +62,11 @@ class TraductorFrame(tk.Frame):
 
         # Frame principal para el contenido
         content_frame = tk.Frame(self, bg='#F5E8D0')
-        content_frame.grid(row=1, column=0, sticky="nsew")
+        content_frame.grid(row=2, column=0, sticky="nsew")
 
-        content_frame.columnconfigure(0, weight=1)
-        content_frame.columnconfigure(1, weight=4)
+        # Ajustar pesos de las columnas en content_frame
+        content_frame.columnconfigure(0, weight=1)  # Historial
+        content_frame.columnconfigure(1, weight=5)  # Imágenes
         content_frame.rowconfigure(0, weight=1)
 
         # Historial de búsquedas
@@ -67,14 +76,14 @@ class TraductorFrame(tk.Frame):
         history_label = ttk.Label(history_frame, text="Historial de palabras (haz clic en una palabra para volver a verla):", background='#F5E8D0', font=('Helvetica', 16), foreground='#8B4513')
         history_label.pack(pady=5)
 
-        # Text widget para el historial
-        self.history_text = tk.Text(history_frame, width=30, wrap='word', state='disabled', font=self.font_large)
+        # Text widget para el historial (ancho reducido)
+        self.history_text = tk.Text(history_frame, width=20, wrap='word', state='disabled', font=self.font_large)
         self.history_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         # Scrollbar para el historial
         history_scrollbar = ttk.Scrollbar(history_frame, orient=tk.VERTICAL, command=self.history_text.yview)
         history_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        # Cambiar el fondo del historial de palabras
+        # Configurar el fondo del historial de palabras
         self.history_text.configure(bg='#F1D9B0', fg='#8B4513', yscrollcommand=history_scrollbar.set)
         self.history_text.bind_all("<MouseWheel>", self.on_mouse_wheel)
 
@@ -92,7 +101,7 @@ class TraductorFrame(tk.Frame):
 
         # Scrollbar horizontal para el canvas de imágenes
         h_scrollbar = ttk.Scrollbar(self, orient=tk.HORIZONTAL, command=self.image_canvas.xview, style="Horizontal.TScrollbar")
-        h_scrollbar.grid(row=2, column=0, sticky='ew')
+        h_scrollbar.grid(row=3, column=0, sticky='ew')
 
         self.image_canvas.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
         self.image_canvas.bind_all("<MouseWheel>", self.on_mouse_wheel)

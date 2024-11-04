@@ -72,4 +72,3 @@ def configure_styles(root):
     style.map("TButton",
               background=[('active', '#A97C50')],  # Color de fondo cuando está activo
               foreground=[('active', '#FFFFFF')])  # Color del texto cuando está activo
-
