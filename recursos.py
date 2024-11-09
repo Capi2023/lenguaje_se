@@ -53,8 +53,10 @@ class RecursosFrame(tk.Frame):
         resources = [
             {"title": "Curso de Lengua de Señas Mexicana (LSM)", "url": "https://www.dif.puebla.gob.mx/cursos-lsm", "description": "Curso oficial ofrecido por el DIF de Puebla."},
             {"title": "Alfabeto Dactilológico", "url": "https://www.fundacioncnse.org/alfabeto"},
-            {"title": "Videos Educativos de LSM", "url": "https://www.youtube.com/channel/UCxLSM"},
-            # Añade más recursos aquí
+            {"title": "10 Señas Básicas (LSM) | Tutorial Rápido", "url": "https://www.youtube.com/watch?v=rLL4LJdPRtY"},
+            {"title": "25 palabras y frases en LSM para principiantes. Aprende Lengua de Señas Mexicana.", "url": "https://www.youtube.com/watch?v=9kt4R2wCrv4"},
+            {"title": "LENGUA DE SEÑAS MEXICANA: PREGUNTAS", "url": "https://www.youtube.com/watch?v=N-XVPcig0LE"},
+            {"title": "¡Aprende Lengua de Señas Mexicana en menos de 10 minutos!", "url": "https://www.youtube.com/watch?v=YUlkHjm5AFA"},
         ]
 
         # Agregar los recursos al frame
