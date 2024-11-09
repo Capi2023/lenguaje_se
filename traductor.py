@@ -5,7 +5,7 @@ from PIL import Image, ImageTk
 import os
 
 # Lista de símbolos que no se utilizan en el lenguaje de señas
-symbols_not_used = [',', '.', '_', '-', '{', '}', '[', ']', '(', ')', '!']
+symbols_not_used = [',', '.', '_', '-', '{', '}', '[', ']', '(', ')', '!','@','#','$','%','^','&','*','=','+',';','|','/','<','>','`',':',';']
 
 # Historial de palabras buscadas
 search_history = []
