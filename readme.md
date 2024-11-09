@@ -1,7 +1,13 @@
 # Artificial
 
-![](https://github.com/Capi2023/Artificial/blob/main/static/imagens/Captura%20de%20pantalla%202024-10-03%20125221.png)
+![](documentos/diccionario.png)
 
-![](https://github.com/Capi2023/Artificial/blob/main/static/imagens/Captura%20de%20pantalla%202024-10-03%20125233.png)
+![](documentos/diccionlo.png)
 
-![](https://github.com/Capi2023/Artificial/blob/main/static/imagens/Captura%20de%20pantalla%202024-10-03%20125249.png)
+![](documentos/diccnum.png)
+
+![](documentos/recursos.png)
+
+![](documentos/traductor.png)
+
+![](documentos/tradupala.png)
