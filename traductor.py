@@ -1,11 +1,12 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from utils import AnimatedGIF, resize_image
 from PIL import Image, ImageTk
 import os
+import re
 
 # Lista de símbolos que no se utilizan en el lenguaje de señas
-symbols_not_used = [',', '.', '_', '-', '{', '}', '[', ']', '(', ')', '!','@','#','$','%','^','&','*','=','+',';','|','/','<','>','`',':',';']
+symbols_not_used = [',', '.', '_', '-', '{', '}', '[', ']', '(', ')', '!','@','#','$','%','^','&','*','=','+',';','|','/','<','>','',':',';']
 
 # Historial de palabras buscadas
 search_history = []
@@ -117,6 +118,16 @@ class TraductorFrame(tk.Frame):
     # Funciones internas del TraductorFrame
     def process_input(self):
         text = self.entry.get()
+        
+        # Separar el texto en "palabras" y verificar cada una
+        words = text.split()
+        for word in words:
+            # Si una palabra contiene tanto letras como números sin separación
+            if re.search(r'[A-Za-z]', word) and re.search(r'[0-9]', word):
+                messagebox.showerror("Entrada no válida", "Por favor, separe letras y números con espacios.")
+                return
+        
+        # Si pasa la validación, continúa con el procesamiento
         if text:
             self.show_images(text)
             self.update_history(text)
@@ -349,3 +360,4 @@ class TraductorFrame(tk.Frame):
         # Actualizar el scroll final
         self.inner_frame.update_idletasks()
         self.image_canvas.config(scrollregion=self.image_canvas.bbox("all"))
+        
