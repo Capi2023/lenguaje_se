@@ -185,6 +185,64 @@ class TraductorFrame(tk.Frame):
 
         self.show_images(text)
 
+    def add_image_to_word_images(self, number_str, word_images):
+        for dir in ['words', 'numbers']:
+            image_path_gif = f"{dir}/{number_str}.gif"
+            image_path_png = f"{dir}/{number_str}.png"
+            image_path_jpeg = f"{dir}/{number_str}.jpeg"
+
+            if os.path.exists(image_path_gif):
+                word_images.append((image_path_gif, 'gif'))
+                return True
+            elif os.path.exists(image_path_png):
+                word_images.append((image_path_png, 'png'))
+                return True
+            elif os.path.exists(image_path_jpeg):
+                word_images.append((image_path_jpeg, 'jpeg'))
+                return True
+        return False
+
+    def process_two_digit_number(self, number_str, word_images):
+        number = int(number_str)
+        tens = (number // 10) * 10
+        units = number % 10
+
+        # Agregar imagen de las decenas
+        tens_found = self.add_image_to_word_images(str(tens), word_images)
+
+        # Agregar imagen de las unidades si no es cero
+        if units != 0:
+            units_found = self.add_image_to_word_images(str(units), word_images)
+        else:
+            units_found = True  # No es necesario agregar imagen para cero
+
+        return tens_found and units_found
+
+    def process_three_digit_number(self, number_str, word_images):
+        number = int(number_str)
+        hundreds = (number // 100) * 100
+        remainder = number % 100
+
+        # Agregar imagen de las centenas
+        hundreds_found = self.add_image_to_word_images(str(hundreds), word_images)
+
+        # Procesar las decenas y unidades restantes
+        if remainder != 0:
+            if remainder < 20:
+                # Agregar imagen directamente si es menor que 20
+                remainder_found = self.add_image_to_word_images(str(remainder), word_images)
+            else:
+                remainder_found = self.process_two_digit_number(str(remainder), word_images)
+        else:
+            remainder_found = True  # No es necesario agregar imagen para cero
+
+        return hundreds_found and remainder_found
+
+    def add_individual_digits(self, number_str, word_images):
+        for digit in number_str:
+            self.add_image_to_word_images(digit, word_images)
+
+
     def show_images(self, text):
         # Elimina cualquier imagen mostrada previamente
         for widget in self.inner_frame.winfo_children():
@@ -285,44 +343,66 @@ class TraductorFrame(tk.Frame):
                         break
 
                 if not found_word_image:
-                    # Si no se encuentra la palabra, procesar por letras
-                    for letter in word:
-                        if letter == " ":
-                            continue
-                        elif letter in symbols_not_used:
-                            warning_message = f"El símbolo '{letter}' no se usa en el lenguaje de señas."
-                            word_images.append((warning_message, 'warning'))
-                            continue
-                        elif letter == "?":
-                            question_image_path_gif = "images/question_mark.gif"
-                            question_image_path_png = "images/question_mark.png"
-                            if os.path.exists(question_image_path_gif):
-                                word_images.append((question_image_path_gif, 'gif'))
-                            elif os.path.exists(question_image_path_png):
-                                word_images.append((question_image_path_png, 'png'))
+                    word_images = []
+                    # Verificar si la palabra es un número
+                    if word.isdigit():
+                        number = int(word)
+                        if number > 999:
+                            messagebox.showwarning("Número demasiado grande", "Por favor, ingrese un número menor o igual a 999.")
+                            i += 1  # Avanzar al siguiente índice
+                            continue  # Pasar a la siguiente palabra
+                        elif 100 <= number <= 999:
+                            # Procesar número de tres dígitos
+                            number_found = self.process_three_digit_number(word, word_images)
+                        elif 20 <= number < 100:
+                            # Procesar número de dos dígitos
+                            number_found = self.process_two_digit_number(word, word_images)
                         else:
-                            letter_variants = [letter.lower(), letter.upper()]
-                            letter_found = False
-                            for l in letter_variants:
-                                letter_image_path_gif = f"images/{l}.gif"
-                                letter_image_path_png = f"images/{l}.png"
-                                letter_image_path_jpeg = f"images/{l}.jpeg"
-
-                                if os.path.exists(letter_image_path_gif):
-                                    word_images.append((letter_image_path_gif, 'gif'))
-                                    letter_found = True
-                                    break
-                                elif os.path.exists(letter_image_path_png):
-                                    word_images.append((letter_image_path_png, 'png'))
-                                    letter_found = True
-                                    break
-                                elif os.path.exists(letter_image_path_jpeg):
-                                    word_images.append((letter_image_path_jpeg, 'jpeg'))
-                                    letter_found = True
-                                    break
-
-                            if not letter_found:
+                            # Procesar números menores de 20
+                            number_found = self.add_image_to_word_images(word, word_images)
+                        if not number_found:
+                            # Si no se encontraron imágenes para el número, procesar dígitos individuales
+                            self.add_individual_digits(word, word_images)
+                    else:
+                        # Si la palabra no es un número, procesar por letras
+                        for letter in word:
+                            if letter == " ":
                                 continue
+                            elif letter in symbols_not_used:
+                                warning_message = f"El símbolo '{letter}' no se usa en el lenguaje de señas."
+                                word_images.append((warning_message, 'warning'))
+                                continue
+                            elif letter == "?":
+                                question_image_path_gif = "images/question_mark.gif"
+                                question_image_path_png = "images/question_mark.png"
+                                if os.path.exists(question_image_path_gif):
+                                    word_images.append((question_image_path_gif, 'gif'))
+                                elif os.path.exists(question_image_path_png):
+                                    word_images.append((question_image_path_png, 'png'))
+                            else:
+                                letter_variants = [letter.lower(), letter.upper()]
+                                letter_found = False
+                                for l in letter_variants:
+                                    letter_image_path_gif = f"images/{l}.gif"
+                                    letter_image_path_png = f"images/{l}.png"
+                                    letter_image_path_jpeg = f"images/{l}.jpeg"
+
+                                    if os.path.exists(letter_image_path_gif):
+                                        word_images.append((letter_image_path_gif, 'gif'))
+                                        letter_found = True
+                                        break
+                                    elif os.path.exists(letter_image_path_png):
+                                        word_images.append((letter_image_path_png, 'png'))
+                                        letter_found = True
+                                        break
+                                    elif os.path.exists(letter_image_path_jpeg):
+                                        word_images.append((letter_image_path_jpeg, 'jpeg'))
+                                        letter_found = True
+                                        break
+
+                                if not letter_found:
+                                    continue
+
 
                 # Mostrar imágenes de la palabra o letras
                 word_frame = tk.Frame(self.inner_frame, bg='#F5E8D0', bd=2, relief='solid',
